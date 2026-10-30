@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IM-RAG: Animated System Architecture Demonstration</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #050811;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      overflow-x: hidden;
+    }
+    header {
+      width: 100%;
+      height: 56px;
+      background: rgba(15, 23, 42, 0.9);
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 50;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 15px;
+    }
+    .badge {
+      font-size: 11px;
+      background: #0284c7;
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+    .btn-download-top {
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+      color: #022c22;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+    .btn-download-top:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+    }
+    #stage-container {
+      position: relative;
+      width: 100%;
+      max-width: 1920px;
+      aspect-ratio: 16 / 9;
+      max-height: calc(100vh - 120px);
+      background: #090d16;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #renderCanvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    #controls-bar {
+      width: 100%;
+      background: rgba(10, 15, 30, 0.95);
+      border-top: 1px solid #1e293b;
+      padding: 12px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 50;
+    }
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: #1e293b;
+      border-radius: 999px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc);
+      transition: width 0.05s linear;
+    }
+    .actions-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 12px;
+    }
+    .transport-btns {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    button.btn {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    button.btn:hover { background: #334155; color: #fff; }
+    button.btn-primary {
+      background: #0284c7;
+      color: #fff;
+      border-color: #38bdf8;
+    }
+    button.btn-primary:hover { background: #0369a1; }
+    .scene-chips {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-top: 4px;
+    }
+    .chip {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      color: #94a3b8;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .chip.active {
+      background: #0284c7;
+      color: #fff;
+      border-color: #38bdf8;
+      font-weight: 700;
+    }
+    /* Modal */
+    #exportModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-box {
+      background: #0f172a;
+      border: 2px solid #10b981;
+      border-radius: 20px;
+      padding: 30px;
+      width: 90%;
+      max-width: 450px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .bar-bg {
+      width: 100%;
+      height: 12px;
+      background: #1e293b;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      background: #10b981;
+      transition: width 0.1s;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+    <div class="brand">
+      <span style="color: #38bdf8;">⚡ IM-RAG</span>
+      <span style="color: #94a3b8; font-size: 13px;">Multimodal Architecture Animation</span>
+      <span class="badge">1080p 60FPS</span>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <button id="btnCapturePng" class="btn">📸 Snapshot PNG</button>
+      <button id="btnExportMp4" class="btn-download-top">📥 Download Video (.mp4 / .webm)</button>
+    </div>
+  </header>
+
+  <!-- 16:9 Viewport Stage -->
+  <div id="stage-container">
+    <canvas id="renderCanvas" width="1920" height="1080"></canvas>
+  </div>
+
+  <!-- Transport Controls -->
+  <div id="controls-bar">
+    <div class="progress-track" id="progressTrack">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="actions-row">
+      <div class="transport-btns">
+        <button id="btnPlayPause" class="btn btn-primary">⏸ Pause</button>
+        <button id="btnReplay" class="btn">🔄 Replay</button>
+        <div style="font-family: monospace; font-size: 13px; font-weight: 700; color: #38bdf8;" id="timeReadout">
+          00:00.0 / 00:55.0
+        </div>
+        <button class="btn" id="btnPhase1" style="border-color: #3b82f6; color: #93c5fd;">Phase 1: Knowledge</button>
+        <button class="btn" id="btnPhase2" style="border-color: #10b981; color: #a7f3d0;">Phase 2: Retrieval</button>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <span style="color: #64748b; font-size: 11px;">Speed:</span>
+        <button class="btn speed-btn" data-speed="0.5">0.5x</button>
+        <button class="btn speed-btn" data-speed="1" style="background: #0284c7; color: #fff;">1x</button>
+        <button class="btn speed-btn" data-speed="1.5">1.5x</button>
+        <button class="btn speed-btn" data-speed="2">2x</button>
+      </div>
+    </div>
+    <!-- Scene selector chips -->
+    <div class="scene-chips" id="sceneChips"></div>
+  </div>
+
+  <!-- Export Progress Modal -->
+  <div id="exportModal">
+    <div class="modal-box">
+      <h3 style="color: #fff; font-size: 18px;">Rendering 1080p Video</h3>
+      <p style="color: #94a3b8; font-size: 12px;">Generating complete 55-second IM-RAG architectural animation frame-by-frame.</p>
+      <div class="bar-bg">
+        <div class="bar-fill" id="modalBarFill"></div>
+      </div>
+      <div style="font-family: monospace; color: #10b981; font-weight: 800; font-size: 16px;" id="modalPercent">
+        0%
+      </div>
+      <p style="color: #64748b; font-size: 11px;">File will download automatically upon completion.</p>
+    </div>
+  </div>
+
+  <script>
+    const DURATION = 55.0; // 55 seconds
+    const SCENES = [
+      { id: 1, name: "Introduction", title: "System Architecture Assembly", start: 0, end: 5.0, phase: "intro",
+        desc: "IM-RAG introduces a dual-path multimodal ingestion and retrieval architecture. Phase 1 & 2 initialize.",
+        activeNodes: [], activeConnectors: [] },
+      { id: 2, name: "Doc Processing", title: "Document Ingestion & Parallel Stream Fork", start: 5.0, end: 9.0, phase: "phase1",
+        desc: "Heterogeneous document enters; pipeline bifurcates into Text Extraction and Page-to-Image Conversion.",
+        activeNodes: ["doc"], activeConnectors: ["c_doc_text", "c_doc_pages"] },
+      { id: 3, name: "Text Pipeline", title: "Text Extraction, Chunking & Storage", start: 9.0, end: 15.0, phase: "phase1",
+        desc: "Prose extracted, partitioned into 512-token semantic chunks, and stored in Text Store Vector DB.",
+        activeNodes: ["doc", "text_ext", "text_chk", "text_store"], activeConnectors: ["c_doc_text", "c_text_chk", "c_chk_store"] },
+      { id: 4, name: "Image Pipeline", title: "Page-to-Image, Vision Encoding & LLM Summaries", start: 15.0, end: 22.0, phase: "phase1",
+        desc: "Pages rasterized, vision encoded (CNN/ViT), LLM generates diagram summaries, indexed into Image Store.",
+        activeNodes: ["pages_img", "img_enc", "img_sum", "img_store", "ret_p1"],
+        activeConnectors: ["c_doc_pages", "c_pages_enc", "c_enc_sum", "c_sum_store", "c_tstore_ret", "c_istore_ret", "c_bridge"] },
+      { id: 5, name: "User Query", title: "Query Ingestion & Vector Transformation", start: 22.0, end: 27.0, phase: "phase2",
+        desc: "User Prompt: 'What information is contained in this document? Analyze text & architecture diagrams.'",
+        activeNodes: ["user_query", "ret_p2"], activeConnectors: ["c_query_ret"] },
+      { id: 6, name: "Multimodal Retrieval", title: "Dual-Store Retrieval & Agent Summary", start: 27.0, end: 33.0, phase: "phase2",
+        desc: "Retriever filters Top-K Text Chunks & Top-K Image Chunks. Agent generates focused diagram summaries.",
+        activeNodes: ["ret_p2", "top_text", "top_img", "agent", "img_sums"],
+        activeConnectors: ["c_ret_toptext", "c_ret_topimg", "c_topimg_agent", "c_agent_sums"] },
+      { id: 7, name: "Context Fusion", title: "Multimodal Context Synthesis", start: 33.0, end: 38.0, phase: "phase2",
+        desc: "Text Chunks + Image Chunks + Diagram Summaries + User Query converge into Combined Context container.",
+        activeNodes: ["top_text", "top_img", "img_sums", "comb_ctx"],
+        activeConnectors: ["c_text_ctx", "c_img_ctx", "c_sums_ctx", "c_query_ctx"] },
+      { id: 8, name: "Mu-LLM Generation", title: "Multimodal Foundation Model Cross-Attention", start: 38.0, end: 43.0, phase: "phase2",
+        desc: "Combined Context enters Mu-LLM. Multi-head cross-attention grounds reasoning across prose and figures.",
+        activeNodes: ["comb_ctx", "mu_llm"], activeConnectors: ["c_ctx_llm"] },
+      { id: 9, name: "Final Response", title: "Context-Aware Response Delivery", start: 43.0, end: 48.0, phase: "phase2",
+        desc: "Final Response generated citing text findings and verified architecture diagrams. Delivered back to user.",
+        activeNodes: ["mu_llm", "final_resp", "user_query"], activeConnectors: ["c_llm_resp", "c_resp_user"] },
+      { id: 10, name: "Complete System", title: "End-to-End Architecture Showcase", start: 48.0, end: 55.0, phase: "overview",
+        desc: "IM-RAG: Image-Based Multimodal Retrieval-Augmented Generation • Complete end-to-end operational pipeline.",
+        activeNodes: ["doc", "text_ext", "text_chk", "text_store", "pages_img", "img_enc", "img_sum", "img_store", "ret_p1", "user_query", "ret_p2", "top_text", "top_img", "agent", "img_sums", "comb_ctx", "mu_llm", "final_resp"],
+        activeConnectors: ["c_doc_text", "c_text_chk", "c_chk_store", "c_doc_pages", "c_pages_enc", "c_enc_sum", "c_sum_store", "c_tstore_ret", "c_istore_ret", "c_bridge", "c_query_ret", "c_ret_toptext", "c_ret_topimg", "c_topimg_agent", "c_agent_sums", "c_text_ctx", "c_img_ctx", "c_sums_ctx", "c_query_ctx", "c_ctx_llm", "c_llm_resp"] }
+    ];
+
+    const NODES = [
+      // Phase 1
+      { id: "doc", label: "Document", sub: "Multimodal PDF", x: 90, y: 230, w: 140, h: 170, color: "#2563EB", phase: 1, icon: "doc" },
+      { id: "text_ext", label: "Text Extraction", sub: "Parser & Cleaner", x: 340, y: 175, w: 155, h: 105, color: "#3B82F6", phase: 1, icon: "text_ext" },
+      { id: "text_chk", label: "Text Chunks", sub: "512-Token Windows", x: 580, y: 175, w: 155, h: 105, color: "#8B5CF6", phase: 1, icon: "text_chk" },
+      { id: "text_store", label: "Text Store", sub: "Vector Database", x: 820, y: 170, w: 155, h: 115, color: "#0284C7", phase: 1, icon: "store_blue" },
+      { id: "pages_img", label: "Pages to Images", sub: "Rasterizer Engine", x: 340, y: 325, w: 155, h: 105, color: "#0EA5E9", phase: 1, icon: "pages" },
+      { id: "img_enc", label: "Image Encoding", sub: "Vision Model (CNN/ViT)", x: 560, y: 325, w: 155, h: 105, color: "#10B981", phase: 1, icon: "enc" },
+      { id: "img_sum", label: "Image + Summary", sub: "Using LLM Agent", x: 775, y: 325, w: 180, h: 105, color: "#38BDF8", phase: 1, icon: "sum" },
+      { id: "img_store", label: "Image Store", sub: "Visual Vector DB", x: 1015, y: 320, w: 155, h: 115, color: "#9333EA", phase: 1, icon: "store_purp" },
+      { id: "ret_p1", label: "Retriever", sub: "Knowledge Index Link", x: 1330, y: 235, w: 175, h: 150, color: "#2563EB", phase: 1, icon: "ret_blue" },
+      // Phase 2
+      { id: "user_query", label: "User Query", sub: "Multimodal Question", x: 90, y: 620, w: 140, h: 140, color: "#2563EB", phase: 2, icon: "query" },
+      { id: "ret_p2", label: "Retriever", sub: "Dual Dispatcher", x: 290, y: 620, w: 155, h: 140, color: "#8B5CF6", phase: 2, icon: "ret_purp" },
+      { id: "top_text", label: "Top-K Text Chunks", sub: "Semantic Matches", x: 520, y: 565, w: 220, h: 100, color: "#38BDF8", phase: 2, icon: "top_text" },
+      { id: "top_img", label: "Top-K Image Chunks", sub: "Diagram Pages", x: 520, y: 685, w: 220, h: 95, color: "#A855F7", phase: 2, icon: "top_img" },
+      { id: "agent", label: "Agent (Gen Summary)", sub: "Vision Summarizer", x: 430, y: 810, w: 180, h: 90, color: "#F59E0B", phase: 2, icon: "agent" },
+      { id: "img_sums", label: "Image Summaries", sub: "Diagram Notes", x: 690, y: 810, w: 200, h: 90, color: "#8B5CF6", phase: 2, icon: "img_sums" },
+      { id: "comb_ctx", label: "Combined Context", sub: "Text + Image + Summary", x: 990, y: 625, w: 240, h: 135, color: "#0EA5E9", phase: 2, icon: "comb_ctx" },
+      { id: "mu_llm", label: "Mu-LLM", sub: "Foundation Model", x: 1320, y: 625, w: 165, h: 135, color: "#10B981", phase: 2, icon: "mu_llm" },
+      { id: "final_resp", label: "Final Response", sub: "Context-Aware Answer", x: 1570, y: 625, w: 205, h: 135, color: "#8B5CF6", phase: 2, icon: "final_resp" }
+    ];
+
+    const CONNECTORS = [
+      { id: "c_doc_text", d: "M 230 280 C 275 280, 290 227, 340 227", color: "#38BDF8" },
+      { id: "c_text_chk", d: "M 495 227 L 580 227", color: "#38BDF8" },
+      { id: "c_chk_store", d: "M 735 227 L 820 227", color: "#38BDF8" },
+      { id: "c_doc_pages", d: "M 230 350 C 275 350, 290 377, 340 377", color: "#A855F7" },
+      { id: "c_pages_enc", d: "M 495 377 L 560 377", color: "#10B981" },
+      { id: "c_enc_sum", d: "M 715 377 L 775 377", color: "#38BDF8" },
+      { id: "c_sum_store", d: "M 955 377 L 1015 377", color: "#A855F7" },
+      { id: "c_tstore_ret", d: "M 975 227 C 1120 227, 1200 280, 1330 280", color: "#38BDF8" },
+      { id: "c_istore_ret", d: "M 1170 377 C 1230 377, 1260 330, 1330 330", color: "#A855F7" },
+      { id: "c_bridge", d: "M 1417 385 C 1417 480, 420 480, 370 620", color: "#60A5FA" },
+      { id: "c_query_ret", d: "M 230 690 L 290 690", color: "#38BDF8" },
+      { id: "c_ret_toptext", d: "M 445 660 C 475 660, 485 615, 520 615", color: "#38BDF8" },
+      { id: "c_ret_topimg", d: "M 445 715 C 475 715, 485 732, 520 732", color: "#A855F7" },
+      { id: "c_topimg_agent", d: "M 560 780 C 560 795, 520 795, 520 810", color: "#F59E0B" },
+      { id: "c_agent_sums", d: "M 610 855 L 690 855", color: "#8B5CF6" },
+      { id: "c_text_ctx", d: "M 740 615 C 840 615, 890 665, 990 665", color: "#38BDF8" },
+      { id: "c_img_ctx", d: "M 740 732 C 840 732, 890 692, 990 692", color: "#A855F7" },
+      { id: "c_sums_ctx", d: "M 890 855 C 950 855, 970 720, 990 720", color: "#8B5CF6" },
+      { id: "c_query_ctx", d: "M 160 760 C 160 880, 1050 880, 1110 760", color: "#10B981" },
+      { id: "c_ctx_llm", d: "M 1230 692 L 1320 692", color: "#10B981" },
+      { id: "c_llm_resp", d: "M 1485 692 L 1570 692", color: "#8B5CF6" },
+      { id: "c_resp_user", d: "M 1672 760 C 1672 900, 160 900, 160 760", color: "#10B981" }
+    ];
+
+    // State
+    let currentTime = 0;
+    let isPlaying = true;
+    let speed = 1.0;
+    let lastStamp = null;
+
+    const canvas = document.getElementById("renderCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Init Scene Chips
+    const chipsContainer = document.getElementById("sceneChips");
+    SCENES.forEach((s) => {
+      const chip = document.createElement("button");
+      chip.className = "chip";
+      chip.id = `chip-${s.id}`;
+      chip.innerText = `${s.id}. ${s.name}`;
+      chip.onclick = () => { currentTime = s.start; isPlaying = true; updateTransport(); };
+      chipsContainer.appendChild(chip);
+    });
+
+    function getScene(t) {
+      for (const s of SCENES) {
+        if (t >= s.start && t <= s.end) return s;
+      }
+      return SCENES[SCENES.length - 1];
+    }
+
+    // Helper: Rounded Rectangle
+    function rRect(c, x, y, w, h, r) {
+      c.beginPath();
+      c.moveTo(x + r, y);
+      c.lineTo(x + w - r, y);
+      c.quadraticCurveTo(x + w, y, x + w, y + r);
+      c.lineTo(x + w, y + h - r);
+      c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      c.lineTo(x + r, y + h);
+      c.quadraticCurveTo(x, y + h, x, y + h - r);
+      c.lineTo(x, y + r);
+      c.quadraticCurveTo(x, y, x + r, y);
+      c.closePath();
+    }
+
+    function render(t) {
+      const s = getScene(t);
+
+      // 1. Studio Backdrop
+      ctx.fillStyle = "#090D16";
+      ctx.fillRect(0, 0, 1920, 1080);
+
+      // Grid
+      ctx.strokeStyle = "rgba(30, 41, 59, 0.4)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < 1920; x += 60) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1080); ctx.stroke();
+      }
+      for (let y = 0; y < 1080; y += 60) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1920, y); ctx.stroke();
+      }
+
+      // Phase 1 Container (Blue Box)
+      ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+      ctx.strokeStyle = "rgba(59, 130, 246, 0.45)";
+      ctx.lineWidth = 2.5;
+      rRect(ctx, 60, 110, 1800, 370, 24);
+      ctx.fill(); ctx.stroke();
+
+      // Phase 1 Banner Pill
+      ctx.fillStyle = "#1E3A8A";
+      ctx.strokeStyle = "#3B82F6";
+      ctx.lineWidth = 1.5;
+      rRect(ctx, 90, 125, 340, 32, 16);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#3B82F6";
+      ctx.beginPath(); ctx.arc(108, 141, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#FFFFFF"; ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("1", 108, 145);
+      ctx.textAlign = "left"; ctx.font = "bold 13px sans-serif";
+      ctx.fillText("Phase 1: Knowledge Base Generation", 126, 146);
+
+      // Phase 2 Container (Green Box)
+      ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+      ctx.strokeStyle = "rgba(16, 185, 129, 0.45)";
+      ctx.lineWidth = 2.5;
+      rRect(ctx, 60, 510, 1800, 410, 24);
+      ctx.fill(); ctx.stroke();
+
+      // Phase 2 Banner Pill
+      ctx.fillStyle = "#064E3B";
+      ctx.strokeStyle = "#10B981";
+      ctx.lineWidth = 1.5;
+      rRect(ctx, 90, 525, 360, 32, 16);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#10B981";
+      ctx.beginPath(); ctx.arc(108, 541, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#FFFFFF"; ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("2", 108, 545);
+      ctx.textAlign = "left"; ctx.font = "bold 13px sans-serif";
+      ctx.fillText("Phase 2: Retrieval and Response Generation", 126, 546);
+
+      // Connectors
+      CONNECTORS.forEach((c) => {
+        const active = s.activeConnectors.includes(c.id);
+        const p = new Path2D(c.d);
+        ctx.strokeStyle = active ? c.color : "#334155";
+        ctx.lineWidth = active ? 4.5 : 2;
+        if (!active) ctx.setLineDash([6, 6]); else ctx.setLineDash([]);
+        ctx.stroke(p);
+        ctx.setLineDash([]);
+
+        if (active) {
+          // Traveling dash highlight
+          ctx.strokeStyle = "#FFFFFF";
+          ctx.lineWidth = 2.5;
+          ctx.setLineDash([8, 18]);
+          ctx.lineDashOffset = -((t * 60) % 26);
+          ctx.stroke(p);
+          ctx.setLineDash([]);
+        }
+      });
+
+      // Nodes
+      NODES.forEach((n) => {
+        const active = s.activeNodes.includes(n.id);
+        ctx.save();
+        ctx.translate(n.x, n.y);
+
+        ctx.fillStyle = active ? "rgba(15, 23, 42, 0.95)" : "rgba(15, 23, 42, 0.65)";
+        ctx.strokeStyle = active ? n.color : "rgba(51, 65, 85, 0.7)";
+        ctx.lineWidth = active ? 2.5 : 1;
+        rRect(ctx, 0, 0, n.w, n.h, 16);
+        ctx.fill(); ctx.stroke();
+
+        if (active) {
+          ctx.shadowColor = n.color;
+          ctx.shadowBlur = 22;
+          ctx.strokeStyle = n.color;
+          rRect(ctx, 0, 0, n.w, n.h, 16);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+
+        // Draw node icon vector
+        drawNodeGraphic(ctx, n.icon, n.w, n.h, active);
+
+        // Labels
+        ctx.fillStyle = active ? "#FFFFFF" : "#E2E8F0";
+        ctx.font = "bold 12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(n.label, n.w / 2, n.h - 18);
+
+        ctx.fillStyle = active ? n.color : "#94A3B8";
+        ctx.font = "9.5px sans-serif";
+        ctx.fillText(n.sub, n.w / 2, n.h - 6);
+
+        ctx.restore();
+      });
+
+      // Header Banner
+      ctx.fillStyle = "#FFFFFF"; ctx.font = "900 24px sans-serif"; ctx.textAlign = "left";
+      ctx.fillText("IM-RAG", 60, 48);
+      ctx.fillStyle = "#38BDF8"; ctx.font = "bold 16px sans-serif";
+      ctx.fillText("Image-Based Multimodal Retrieval-Augmented Generation", 170, 46);
+      ctx.fillStyle = "#94A3B8"; ctx.font = "12px sans-serif";
+      ctx.fillText("Dual-Path Knowledge Ingestion & Context-Aware Multimodal Inference", 170, 68);
+
+      // Time readout
+      ctx.fillStyle = "#1E293B"; ctx.strokeStyle = "#334155"; ctx.lineWidth = 1;
+      rRect(ctx, 1660, 24, 200, 42, 10); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#38BDF8"; ctx.font = "bold 14px monospace"; ctx.textAlign = "center";
+      const mm = String(Math.floor(t / 60)).padStart(2, '0');
+      const ss = String(Math.floor(t % 60)).padStart(2, '0');
+      const ms = Math.floor((t % 1) * 10);
+      ctx.fillText(`TIME: ${mm}:${ss}.${ms} / 00:55`, 1760, 50);
+
+      // Active Scene Narrative HUD (Top Bar)
+      ctx.fillStyle = "rgba(2, 6, 23, 0.9)"; ctx.strokeStyle = "#1E293B"; ctx.lineWidth = 1.5;
+      rRect(ctx, 500, 24, 960, 60, 12); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#38BDF8"; ctx.font = "bold 12px sans-serif"; ctx.textAlign = "left";
+      ctx.fillText(`SCENE ${s.id}: ${s.name.toUpperCase()} — ${s.title}`, 516, 45);
+      ctx.fillStyle = "#CBD5E1"; ctx.font = "11px sans-serif";
+      ctx.fillText(s.desc, 516, 68);
+
+      // Scene 5 Dialog: User Query
+      if (s.id === 5) {
+        ctx.fillStyle = "rgba(30, 58, 138, 0.95)"; ctx.strokeStyle = "#60A5FA"; ctx.lineWidth = 2;
+        rRect(ctx, 100, 510, 360, 75, 12); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#93C5FD"; ctx.font = "bold 11px sans-serif"; ctx.fillText("SAMPLE USER QUERY:", 114, 528);
+        ctx.fillStyle = "#FFFFFF"; ctx.font = "italic 11px sans-serif";
+        ctx.fillText('"What information is contained in this document? Analyze text & diagrams."', 114, 548);
+        ctx.fillStyle = "#60A5FA"; ctx.font = "10px sans-serif"; ctx.fillText("Dispatched to Multimodal Retriever →", 114, 568);
+      }
+
+      // Scene 6 Inset: Retrieval Process
+      if (s.id === 6) {
+        ctx.fillStyle = "rgba(15, 23, 42, 0.95)"; ctx.strokeStyle = "#A855F7"; ctx.lineWidth = 1.5;
+        rRect(ctx, 1420, 520, 420, 100, 12); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#C084FC"; ctx.font = "bold 11px sans-serif"; ctx.fillText("RETRIEVAL CANDIDATES FILTERED:", 1436, 542);
+        ctx.fillStyle = "#38BDF8"; ctx.font = "10.5px sans-serif"; ctx.fillText("• Top-3 Text Chunks: prose & table vectors", 1436, 562);
+        ctx.fillStyle = "#C084FC"; ctx.font = "10.5px sans-serif"; ctx.fillText("• Top-2 Diagram Pages: visual features & agent summaries", 1436, 582);
+        ctx.fillStyle = "#F59E0B"; ctx.font = "italic 9px sans-serif"; ctx.fillText("* Illustrative retrieval process, not a claim of measured model performance.", 1436, 604);
+      }
+
+      // Scene 9 Inset: Final Response
+      if (s.id === 9) {
+        ctx.fillStyle = "rgba(88, 28, 135, 0.95)"; ctx.strokeStyle = "#C084FC"; ctx.lineWidth = 2;
+        rRect(ctx, 1420, 510, 420, 105, 12); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#34D399"; ctx.font = "bold 11.5px sans-serif"; ctx.fillText("✓ SYNTHESIZED MULTIMODAL RESPONSE", 1436, 532);
+        ctx.fillStyle = "#F3E8FF"; ctx.font = "10.5px sans-serif";
+        ctx.fillText('"IM-RAG couples dual-path text and image ingestion with', 1436, 552);
+        ctx.fillText('retrieval-augmented generation for context-aware answers."', 1436, 570);
+        ctx.fillStyle = "#FDE68A"; ctx.font = "italic 9px sans-serif";
+        ctx.fillText("* Illustrative demonstration response, not an execution of a live backend.", 1436, 595);
+      }
+
+      // Scene 10 Hero Card
+      if (s.id === 10) {
+        ctx.fillStyle = "rgba(2, 6, 23, 0.96)"; ctx.strokeStyle = "#38BDF8"; ctx.lineWidth = 2.5;
+        rRect(ctx, 660, 430, 600, 200, 20); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#38BDF8"; ctx.font = "bold 13px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("ARCHITECTURE SHOWCASE COMPLETE", 960, 465);
+        ctx.fillStyle = "#FFFFFF"; ctx.font = "900 32px sans-serif";
+        ctx.fillText("IM-RAG", 960, 508);
+        ctx.fillStyle = "#7DD3FC"; ctx.font = "bold 16px sans-serif";
+        ctx.fillText("Image-Based Multimodal Retrieval-Augmented Generation", 960, 538);
+        ctx.fillStyle = "#F1F5F9"; ctx.font = "italic 13px sans-serif";
+        ctx.fillText('"From Documents and Images to Context-Aware Answers."', 960, 580);
+      }
+    }
+
+    // Node Graphics Renderer
+    function drawNodeGraphic(c, icon, w, h, active) {
+      c.save();
+      c.translate(w / 2 - 20, 14);
+      if (icon === "doc") {
+        c.fillStyle = "#94A3B8"; c.fillRect(4, 2, 32, 40);
+        c.fillStyle = "#FFFFFF"; c.fillRect(8, 6, 32, 40);
+        c.fillStyle = "#0284C7"; c.fillRect(12, 22, 24, 18);
+      } else if (icon === "text_ext") {
+        c.fillStyle = "#FFFFFF"; c.fillRect(6, 4, 28, 36);
+        c.fillStyle = "#2563EB"; c.fillRect(10, 10, 20, 3); c.fillRect(10, 16, 16, 2); c.fillRect(10, 21, 20, 2);
+      } else if (icon === "text_chk") {
+        c.fillStyle = "#A855F7"; c.fillRect(4, 6, 28, 22);
+        c.fillStyle = "#C084FC"; c.fillRect(8, 12, 28, 22);
+      } else if (icon === "store_blue" || icon === "store_purp") {
+        c.fillStyle = icon === "store_blue" ? "#0284C7" : "#7E22CE";
+        c.fillRect(8, 12, 24, 24);
+        c.beginPath(); c.ellipse(20, 12, 12, 5, 0, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(20, 36, 12, 5, 0, 0, Math.PI * 2); c.fill();
+      } else if (icon === "pages") {
+        c.fillStyle = "#FFFFFF"; c.fillRect(4, 8, 24, 20);
+        c.fillStyle = "#0284C7"; c.fillRect(6, 10, 20, 16);
+        c.fillStyle = "#FFFFFF"; c.fillRect(14, 16, 24, 20);
+        c.fillStyle = "#0369A1"; c.fillRect(16, 18, 20, 16);
+      } else if (icon === "enc") {
+        c.fillStyle = "#10B981";
+        c.beginPath(); c.moveTo(20, 6); c.lineTo(34, 14); c.lineTo(20, 22); c.lineTo(6, 14); c.closePath(); c.fill();
+        c.fillStyle = "#059669";
+        c.beginPath(); c.moveTo(6, 14); c.lineTo(20, 22); c.lineTo(20, 38); c.lineTo(6, 30); c.closePath(); c.fill();
+        c.fillStyle = "#047857";
+        c.beginPath(); c.moveTo(20, 22); c.lineTo(34, 14); c.lineTo(34, 30); c.lineTo(20, 38); c.closePath(); c.fill();
+      } else if (icon === "sum") {
+        c.fillStyle = "#F0F9FF"; c.fillRect(2, 6, 36, 28);
+        c.fillStyle = "#0284C7"; c.fillRect(6, 10, 12, 14);
+        c.fillStyle = "#0284C7"; c.beginPath(); c.arc(22, 17, 3, 0, Math.PI*2); c.fill();
+        c.fillStyle = "#64748B"; c.fillRect(28, 10, 8, 2); c.fillRect(28, 15, 8, 2);
+      } else if (icon === "ret_blue" || icon === "ret_purp") {
+        c.fillStyle = icon === "ret_blue" ? "#1D4ED8" : "#6B21A8";
+        c.fillRect(8, 10, 24, 28);
+        c.strokeStyle = "#FFFFFF"; c.lineWidth = 2.5;
+        c.beginPath(); c.arc(20, 22, 7, 0, Math.PI * 2); c.stroke();
+        c.beginPath(); c.moveTo(25, 27); c.lineTo(30, 32); c.stroke();
+      } else if (icon === "query") {
+        c.fillStyle = "#3B82F6"; c.beginPath(); c.arc(20, 16, 8, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.arc(20, 36, 14, Math.PI, 0); c.fill();
+        c.fillStyle = "#FFFFFF"; c.fillRect(28, 4, 14, 12);
+        c.fillStyle = "#2563EB"; c.font = "bold 9px sans-serif"; c.fillText("?", 33, 13);
+      } else if (icon === "top_text" || icon === "top_img") {
+        c.fillStyle = icon === "top_text" ? "#38BDF8" : "#A855F7";
+        c.fillRect(2, 8, 10, 16); c.fillRect(15, 8, 10, 16); c.fillRect(28, 8, 10, 16);
+      } else if (icon === "agent") {
+        c.fillStyle = "#F59E0B"; c.fillRect(6, 10, 28, 22);
+        c.fillStyle = "#1E293B"; c.beginPath(); c.arc(14, 18, 2.5, 0, Math.PI * 2); c.arc(26, 18, 2.5, 0, Math.PI * 2); c.fill();
+      } else if (icon === "img_sums") {
+        c.fillStyle = "#A855F7"; c.fillRect(6, 8, 12, 18); c.fillRect(22, 8, 12, 18);
+      } else if (icon === "comb_ctx") {
+        c.fillStyle = "#0284C7"; c.fillRect(4, 6, 10, 14);
+        c.fillStyle = "#7E22CE"; c.fillRect(16, 6, 10, 14);
+        c.fillStyle = "#10B981"; c.fillRect(28, 6, 10, 14);
+      } else if (icon === "mu_llm") {
+        c.fillStyle = "#10B981";
+        c.beginPath(); c.moveTo(20, 6); c.lineTo(34, 14); c.lineTo(20, 22); c.lineTo(6, 14); c.closePath(); c.fill();
+        c.fillStyle = "#059669";
+        c.beginPath(); c.moveTo(6, 14); c.lineTo(20, 22); c.lineTo(20, 38); c.lineTo(6, 30); c.closePath(); c.fill();
+        c.fillStyle = "#047857";
+        c.beginPath(); c.moveTo(20, 22); c.lineTo(34, 14); c.lineTo(34, 30); c.lineTo(20, 38); c.closePath(); c.fill();
+      } else if (icon === "final_resp") {
+        c.fillStyle = "#FAF5FF"; c.fillRect(4, 8, 32, 26);
+        c.fillStyle = "#10B981"; c.beginPath(); c.arc(14, 21, 6, 0, Math.PI * 2); c.fill();
+        c.fillStyle = "#6B21A8"; c.fillRect(22, 16, 12, 3); c.fillRect(22, 23, 10, 2);
+      }
+      c.restore();
+    }
+
+    // Main animation loop
+    function loop(stamp) {
+      if (!lastStamp) lastStamp = stamp;
+      const delta = (stamp - lastStamp) / 1000;
+      lastStamp = stamp;
+
+      if (isPlaying) {
+        currentTime += delta * speed;
+        if (currentTime >= DURATION) {
+          currentTime = DURATION;
+          isPlaying = false;
+          document.getElementById("btnPlayPause").innerText = "▶ Play";
+        }
+      }
+
+      render(currentTime);
+      updateTransport();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    function updateTransport() {
+      const pct = (currentTime / DURATION) * 100;
+      document.getElementById("progressFill").style.width = pct + "%";
+
+      const mm = String(Math.floor(currentTime / 60)).padStart(2, '0');
+      const ss = String(Math.floor(currentTime % 60)).padStart(2, '0');
+      const ms = Math.floor((currentTime % 1) * 10);
+      document.getElementById("timeReadout").innerText = `${mm}:${ss}.${ms} / 00:55.0`;
+
+      const curr = getScene(currentTime);
+      SCENES.forEach(s => {
+        const c = document.getElementById(`chip-${s.id}`);
+        if (c) {
+          if (s.id === curr.id) c.classList.add("active");
+          else c.classList.remove("active");
+        }
+      });
+    }
+
+    // Transport Listeners
+    document.getElementById("btnPlayPause").onclick = () => {
+      isPlaying = !isPlaying;
+      document.getElementById("btnPlayPause").innerText = isPlaying ? "⏸ Pause" : "▶ Play";
+    };
+    document.getElementById("btnReplay").onclick = () => {
+      currentTime = 0; isPlaying = true;
+      document.getElementById("btnPlayPause").innerText = "⏸ Pause";
+    };
+    document.getElementById("btnPhase1").onclick = () => { currentTime = 5.0; isPlaying = true; };
+    document.getElementById("btnPhase2").onclick = () => { currentTime = 22.0; isPlaying = true; };
+
+    document.querySelectorAll(".speed-btn").forEach(btn => {
+      btn.onclick = () => {
+        speed = parseFloat(btn.dataset.speed);
+        document.querySelectorAll(".speed-btn").forEach(b => {
+          b.style.background = "#1e293b"; b.style.color = "#e2e8f0";
+        });
+        btn.style.background = "#0284c7"; btn.style.color = "#fff";
+      };
+    });
+
+    document.getElementById("progressTrack").onclick = (e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pos = (e.clientX - rect.left) / rect.width;
+      currentTime = pos * DURATION;
+    };
+
+    // Snapshot PNG
+    document.getElementById("btnCapturePng").onclick = () => {
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = `IM-RAG-Frame-${currentTime.toFixed(1)}s.png`;
+      a.click();
+    };
+
+    // MP4 / WebM Video Export Pipeline
+    document.getElementById("btnExportMp4").onclick = exportVideo;
+
+    async function exportVideo() {
+      isPlaying = false;
+      const modal = document.getElementById("exportModal");
+      const bar = document.getElementById("modalBarFill");
+      const num = document.getElementById("modalPercent");
+      modal.style.display = "flex";
+
+      let mime = "video/webm;codecs=vp9";
+      if (MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")) {
+        mime = "video/mp4;codecs=avc1";
+      } else if (MediaRecorder.isTypeSupported("video/mp4")) {
+        mime = "video/mp4";
+      }
+
+      const stream = canvas.captureStream(30);
+      const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8000000 });
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mime });
+        const ext = mime.includes("mp4") ? "mp4" : "webm";
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `IM-RAG-System-Architecture-Demonstration.${ext}`;
+        a.click();
+        modal.style.display = "none";
+      };
+
+      recorder.start();
+
+      const fps = 30;
+      const totalFrames = Math.floor(DURATION * fps);
+      let f = 0;
+
+      function renderFrame() {
+        if (f >= totalFrames) {
+          recorder.stop();
+          return;
+        }
+        const t = f / fps;
+        render(t);
+        f++;
+        const pct = Math.floor((f / totalFrames) * 100);
+        bar.style.width = pct + "%";
+        num.innerText = pct + "%";
+        setTimeout(renderFrame, 10);
+      }
+      renderFrame();
+    }
+  </script>
+</body>
+</html>
